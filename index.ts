@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import Expo from "expo-server-sdk";
+import {Expo} from "expo-server-sdk";
 
 const app = new Hono();
 const expo = new Expo();
