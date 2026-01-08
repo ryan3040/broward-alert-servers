@@ -1,21 +1,7 @@
- { 
-
-  “name”: “broward-alerts-server”, 
-
-  “version”: “1.0.0”, 
-
-  “scripts”: { 
-
-    “start”: “bun run index.ts” 
-
-  }, 
-
-  “dependencies”: { 
-
-    “expo-server-sdk”: “^3.10.0”, 
-
-    “hono”: “^4.4.0” 
-
-  } 
-
+{
+  "name": "broward-alerts-server",
+  "dependencies": {
+    "expo-server-sdk": "^3.10.0",
+    "hono": "^4.4.0"
+  }
 }
