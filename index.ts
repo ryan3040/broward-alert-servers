@@ -93,4 +93,4 @@ app.get("/api/stats", (c) => {
 
 const port = process.env.PORT || 3000;
 console.log(`Broward Alerts Push Server running on port ${port}`);
-export default { port, fetch: app.fetch };
+export default { port: Number(port), fetch: app.fetch };
