@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import {Expo} from "expo-server-sdk";
+import { Expo } from "expo-server-sdk";
 
 const app = new Hono();
 const expo = new Expo();
@@ -10,43 +10,28 @@ const ADMIN_PIN = process.env.ADMIN_PIN || "1234";
 app.use("/*", cors());
 
 app.get("/", (c) => {
-  return c.json({
-    status: "ok",
-    message: "Broward Alerts Push Server",
-    devices: devices.size,
-  });
+  return c.json({ status: "ok", message: "Broward Alerts Push Server", devices: devices.size });
 });
 
-app.post("/api/devices/register", async (c) => {
+app.post("/api/register", async (c) => {
   const body = await c.req.json();
   const { pushToken, platform, isSubscribed } = body;
   if (!pushToken || !Expo.isExpoPushToken(pushToken)) {
     return c.json({ success: false, error: "Invalid push token" }, 400);
   }
   const deviceId = Buffer.from(pushToken).toString("base64").slice(0, 32);
-  devices.set(deviceId, {
-    token: pushToken,
-    platform: platform || "ios",
-    isSubscribed: isSubscribed || false,
-    followedAlerts: [],
-    createdAt: Date.now(),
-  });
-  console.log("Device Registered:", deviceId, "Total:", devices.size);
+  devices.set(deviceId, { token: pushToken, platform: platform || false, isSubscribed: isSubscribed ?? true });
   return c.json({ success: true, data: { deviceId } });
 });
 
 app.post("/api/notifications/broadcast", async (c) => {
   const adminPin = c.req.header("X-Admin-Pin");
-  if (adminPin !== ADMIN_PIN) {
-    return c.json({ success: false, error: "Unauthorized" }, 401);
-  }
+  if (adminPin !== ADMIN_PIN) return c.json({ success: false, error: "Unauthorized" }, 401);
   const body = await c.req.json();
   const { title, body: notificationBody, data, subscribersOnly } = body;
-  if (!title || !notificationBody) {
-    return c.json({ success: false, error: "Title and body required" }, 400);
-  }
+  if (!title || !notificationBody) return c.json({ success: false, error: "Title and body required" }, 400);
   const messages = [];
-  for (const device of devices.values()) {
+  for (const [, device] of devices) {
     if (subscribersOnly && !device.isSubscribed) continue;
     if (Expo.isExpoPushToken(device.token)) {
       messages.push({
@@ -55,21 +40,19 @@ app.post("/api/notifications/broadcast", async (c) => {
         title,
         body: notificationBody,
         data: data || {},
-        priority: "high",
+        priority: "high"
       });
     }
   }
-  if (messages.length === 0) {
-    return c.json({ success: true, message: "No devices to notify", sent: 0 });
-  }
-  const chunks = expo.chunkPushNotifications(messages);
+  if (messages.length === 0) return c.json({ success: true, sent: 0, message: "No devices to notify" });
+  const expoChunkPushNotifications = expo.chunkPushNotifications(messages);
   let sent = 0;
-  for (const chunk of chunks) {
+  for (const chunk of expoChunkPushNotifications) {
     try {
       const tickets = await expo.sendPushNotificationsAsync(chunk);
       sent += tickets.length;
     } catch (error) {
-      console.error("Error sending chunk:", error);
+      console.error("Error:", error);
     }
   }
   return c.json({ success: true, sent, total: devices.size });
@@ -77,20 +60,18 @@ app.post("/api/notifications/broadcast", async (c) => {
 
 app.get("/api/stats", (c) => {
   const adminPin = c.req.header("X-Admin-Pin");
-  if (adminPin !== ADMIN_PIN) {
-    return c.json({ success: false, error: "Unauthorized" }, 401);
-  }
+  if (adminPin !== ADMIN_PIN) return c.json({ success: false, error: "Unauthorized" }, 401);
   const subscriberCount = Array.from(devices.values()).filter((d) => d.isSubscribed).length;
   return c.json({
     success: true,
     data: {
       totalDevices: devices.size,
       subscribers: subscriberCount,
-      freeUsers: devices.size - subscriberCount,
-    },
+      freeUsers: devices.size - subscriberCount
+    }
   });
 });
 
-const port = process.env.PORT || 3000;
+const port = Number(process.env.PORT) || 3000;
 console.log(`Broward Alerts Push Server running on port ${port}`);
-export default { port: Number(port), fetch: app.fetch };
+export default { port, fetch: app.fetch };
