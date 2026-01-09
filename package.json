@@ -1,5 +1,5 @@
 {
-  "name": "broward-alerts-server",
+  "name": "broward-alerts-server", "type": "module"
   "dependencies": {
     "expo-server-sdk": "^3.10.0",
     "hono": "^4.4.0"
